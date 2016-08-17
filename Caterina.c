@@ -61,9 +61,9 @@ static bool RunBootloader = true;
 static bool sketchPresent = false;
 
 /* Pulse generation counters to keep track of the time remaining for each pulse type */
-#define TX_RX_LED_PULSE_PERIOD 100
-uint16_t TxLEDPulse = 0; // time remaining for Tx LED pulse
-uint16_t RxLEDPulse = 0; // time remaining for Rx LED pulse
+#define TX_RX_LED_PULSE_PERIOD 100 // Max: 255 ms
+uint8_t TxLEDPulse = 0; // time remaining for Tx LED pulse
+uint8_t RxLEDPulse = 0; // time remaining for Rx LED pulse
 
 /* Bootloader timeout timer */
 // MAH 8/15/12- add this switch so timeouts work properly when the chip is running at 8MHz instead of 16.
