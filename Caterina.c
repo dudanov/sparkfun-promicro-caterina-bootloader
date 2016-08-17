@@ -118,11 +118,11 @@ int main(void)
 	/* Save the value of the boot key memory before it is overwritten */
 	uint8_t bootKeyPtrVal = *bootKeyPtr;
 	*bootKeyPtr = 0;
-
+	
 	/* Check the reason for the reset so we can act accordingly */
 	uint8_t  mcusr_state = MCUSR;		// store the initial state of the Status register
 	MCUSR = 0;				// clear all reset flags	
-
+	
 	/* Watchdog may be configured with a 15 ms period so must disable it before going any further */
 	// MAH 8/15/12- I removed this because wdt_disable() is the first thing SetupHardware() does- why
 	//  do it twice right in a row?
@@ -134,10 +134,10 @@ int main(void)
 	//  the bootloader, there's no point spending the time initializing the USB.
 	// SetupHardware();
 	wdt_disable();
-
+	
 	// Disable clock division 
 	clock_prescale_set(clock_div_1);
-
+	
 	// Relocate the interrupt vector table to the bootloader section
 	MCUCR = (1 << IVCE);
 	MCUCR = (1 << IVSEL);
@@ -146,16 +146,16 @@ int main(void)
 	TX_LED_OFF();
 	RX_LED_OFF();
 	
-	// Initialize TIMER1 to handle bootloader timeout and LED tasks.  
+	// Initialize TIMER0 to handle bootloader timeout and LED tasks.
 	// With 16 MHz clock and 1/64 prescaler, timer 1 is clocked at 250 kHz
 	// Our chosen compare match generates an interrupt every 1 ms.
 	// This interrupt is disabled selectively when doing memory reading, erasing,
-	// or writing since SPM has tight timing requirements. 
+	// or writing since SPM has tight timing requirements.
 	
 	OCR0A = 249;
-	TCCR0A = (1 << WGM01); // CTC mode (TOP in OCR0A)
-	TCCR0B = ((1 << CS01) | (1 << CS00));	// 1/64 prescaler on timer 0 input
-	TIMSK0 = (1 << OCIE0A);			// enable timer 0 output compare A match interrupt
+	TCCR0A = (1 << WGM01);                // CTC mode (TOP in OCR0A)
+	TCCR0B = ((1 << CS01) | (1 << CS00)); // 1/64 prescaler on timer 0 input
+	TIMSK0 = (1 << OCIE0A);               // enable timer 0 output compare A match interrupt
 	
 	// MAH 8/15/12- this replaces bulky pgm_read_word(0) calls later on, to save memory.
 	if (pgm_read_word(0) != 0xFFFF)
@@ -170,7 +170,7 @@ int main(void)
 	if ((mcusr_state & (1 << EXTRF)) && (bootKeyPtrVal != bootKey)) {
 		*bootKeyPtr = bootKey;
 		sei();
-		while (RunBootloader) 
+		while (RunBootloader)
 		{
 			if (resetTimeout > EXT_RESET_TIMEOUT_PERIOD)
 				RunBootloader = false;
@@ -180,11 +180,13 @@ int main(void)
 		RunBootloader = true;
 		if (sketchPresent)
 			StartSketch();
-	} 
+	}
+	
 	// On a power-on reset, we ALWAYS want to go to the sketch. If there is one.
 	else if ((mcusr_state & (1 << PORF)) && sketchPresent) {
 		StartSketch();
 	}
+	
 	// On a watchdog reset, if the bootKey isn't set, and there's a sketch, we should just
 	//  go straight to the sketch.
 	else if ((mcusr_state & (1 << WDRF)) && (bootKeyPtrVal != bootKey) && sketchPresent) {
@@ -210,10 +212,10 @@ int main(void)
 		if (Timeout > TIMEOUT_PERIOD)
 			RunBootloader = false;
 	}
-
+	
 	/* Disconnect from the host - USB interface will be reset later along with the AVR */
 	USB_Detach();
-
+	
 	/* Jump to beginning of application space to run the sketch - do not reset */	
 	StartSketch();
 }
@@ -225,7 +227,7 @@ ISR(TIMER0_COMPA_vect, ISR_BLOCK)
 		TX_LED_OFF();
 	if (RxLEDPulse && !(--RxLEDPulse))
 		RX_LED_OFF();
-		
+	
 	resetTimeout++;
 	if (pgm_read_word(0) != 0xFFFF)
 		Timeout++;
