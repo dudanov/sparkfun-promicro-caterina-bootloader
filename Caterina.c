@@ -67,7 +67,7 @@ uint16_t RxLEDPulse = 0; // time remaining for Rx LED pulse
 
 /* Bootloader timeout timer */
 // MAH 8/15/12- add this switch so timeouts work properly when the chip is running at 8MHz instead of 16.
-#if F_CPU == 8000000 
+#if F_CPU == 8000000
 #define TIMEOUT_PERIOD	4000
 #define EXT_RESET_TIMEOUT_PERIOD	375
 #else
@@ -105,7 +105,6 @@ void StartSketch(void)
 	MCUCR = (1 << IVCE);
 	MCUCR = 0;
 
-	L_LED_OFF();
 	TX_LED_OFF();
 	RX_LED_OFF();
 
@@ -113,23 +112,6 @@ void StartSketch(void)
 	__asm__ volatile("jmp 0x0000");
 	
 }
-
-/*	Breathing animation on L LED indicates bootloader is running */
-// MAH 8/15/12- Pulled this code inline down below- we only call it once and while inlining it is
-//  questionable coding practice, it saves us a few bytes, which is important.
-uint16_t LLEDPulse;
-/*void LEDPulse(void)
-{
-	LLEDPulse++;
-	uint8_t p = LLEDPulse >> 8;
-	if (p > 127)
-		p = 254-p;
-	p += p;
-	if (((uint8_t)LLEDPulse) > p)
-		L_LED_OFF();
-	else
-		L_LED_ON();
-}*/
 
 /** Main program entry point. This routine configures the hardware required by the bootloader, then continuously
  *  runs the bootloader processing routine until it times out or is instructed to exit.
@@ -164,8 +146,7 @@ int main(void)
 	MCUCR = (1 << IVSEL);
 	
 	LED_SETUP();
-	CPU_PRESCALE(0); 
-	L_LED_OFF();
+	CPU_PRESCALE(0);
 	TX_LED_OFF();
 	RX_LED_OFF();
 	
@@ -177,12 +158,13 @@ int main(void)
 
 	OCR1AH = 0;
 	OCR1AL = 250;
-	TIMSK1 = (1 << OCIE1A);					// enable timer 1 output compare A match interrupt
+	TIMSK1 = (1 << OCIE1A);			// enable timer 1 output compare A match interrupt
 	TCCR1B = ((1 << CS11) | (1 << CS10));	// 1/64 prescaler on timer 1 input
 	
 	
 	// MAH 8/15/12- this replaces bulky pgm_read_word(0) calls later on, to save memory.
-	if (pgm_read_word(0) != 0xFFFF) sketchPresent = true;
+	if (pgm_read_word(0) != 0xFFFF)
+		sketchPresent = true;
 	
 	// MAH 8/15/12- quite a bit changed in this section- let's just pretend nothing has been reserved
 	//  and all comments throughout are from me.
@@ -190,7 +172,7 @@ int main(void)
 	//  our wheels for about 750ms, then proceed to the sketch, if there is one. If, during that 750ms,
 	//  another external reset occurs, on the next pass through this decision tree, execution will fall
 	//  through to the bootloader.
-	if ( (mcusr_state & (1<<EXTRF)) && (bootKeyPtrVal != bootKey) ) {
+	if ((mcusr_state & (1 << EXTRF)) && (bootKeyPtrVal != bootKey)) {
 		*bootKeyPtr = bootKey;
 		sei();
 		while (RunBootloader) 
@@ -201,15 +183,16 @@ int main(void)
 		cli();
 		*bootKeyPtr = 0;
 		RunBootloader = true;
-		if (sketchPresent) StartSketch();
+		if (sketchPresent)
+			StartSketch();
 	} 
 	// On a power-on reset, we ALWAYS want to go to the sketch. If there is one.
-	else if ( (mcusr_state & (1<<PORF)) && sketchPresent) {	
+	else if ((mcusr_state & (1 << PORF)) && sketchPresent) {
 		StartSketch();
-	} 
+	}
 	// On a watchdog reset, if the bootKey isn't set, and there's a sketch, we should just
 	//  go straight to the sketch.
-	else if ( (mcusr_state & (1<<WDRF) ) && (bootKeyPtrVal != bootKey) && sketchPresent) {	
+	else if ((mcusr_state & (1 << WDRF)) && (bootKeyPtrVal != bootKey) && sketchPresent) {
 		// If it looks like an "accidental" watchdog reset then start the sketch.
 		StartSketch();
 	}
@@ -231,17 +214,6 @@ int main(void)
 		/* Time out and start the sketch if one is present */
 		if (Timeout > TIMEOUT_PERIOD)
 			RunBootloader = false;
-			
-		// MAH 8/15/12- This used to be a function call- inlining it saves a few bytes.
-		LLEDPulse++;
-		uint8_t p = LLEDPulse >> 8;
-		if (p > 127)
-			p = 254-p;
-		p += p;
-		if (((uint8_t)LLEDPulse) > p)
-			L_LED_OFF();
-		else
-			L_LED_ON();
 	}
 
 	/* Disconnect from the host - USB interface will be reset later along with the AVR */
@@ -251,50 +223,6 @@ int main(void)
 	StartSketch();
 }
 
-/** Configures all hardware required for the bootloader. */
-
-// MAH 31 Aug 12 Remove this from a call and make it inline code to save a few bytes.
-/*void SetupHardware(void)
-{
-	// Disable watchdog if enabled by bootloader/fuses
-	// MAH- 31 Aug 12 I am unclear as to what this line of code is expected to
-	//  do. It will clear the WDRF bit, if set, while leaving other reset bits
-	//  alone. However, we already do that immediately upon entering the bootloader,
-	//  so this is just eating memory space.
-	//MCUSR &= ~(1 << WDRF);
-	wdt_disable();
-
-	// Disable clock division 
-	clock_prescale_set(clock_div_1);
-
-	// Relocate the interrupt vector table to the bootloader section
-	MCUCR = (1 << IVCE);
-	MCUCR = (1 << IVSEL);
-	
-	LED_SETUP();
-	CPU_PRESCALE(0); 
-	L_LED_OFF();
-	TX_LED_OFF();
-	RX_LED_OFF();
-	
-	// Initialize TIMER1 to handle bootloader timeout and LED tasks.  
-	// With 16 MHz clock and 1/64 prescaler, timer 1 is clocked at 250 kHz
-	// Our chosen compare match generates an interrupt every 1 ms.
-	// This interrupt is disabled selectively when doing memory reading, erasing,
-	// or writing since SPM has tight timing requirements. 
-
-	OCR1AH = 0;
-	OCR1AL = 250;
-	TIMSK1 = (1 << OCIE1A);					// enable timer 1 output compare A match interrupt
-	TCCR1B = ((1 << CS11) | (1 << CS10));	// 1/64 prescaler on timer 1 input
-	
-	// MAH 8/15/12- Remove the USB_Init() call from here; I want to start the hardware- particularly
-	//  the counter- before I start up the USB support, so I can do the busywait for the second reset
-	//  push.
-
-}
-*/
-//uint16_t ctr = 0;
 ISR(TIMER1_COMPA_vect, ISR_BLOCK)
 {
 	/* Reset counter */
@@ -405,7 +333,7 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 
 	/* Check if command is to read memory */
 	if (Command == 'g')
-	{		
+	{
 		/* Re-enable RWW section */
 		boot_rww_enable();
 
