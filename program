@@ -1,0 +1,1 @@
+avrdude -p m32u4 -P usb -c usbasp -U flash:w:Caterina.hex -U efuse:w:0xcb:m -U hfuse:w:0xd8:m -U lfuse:w:0xff:m
