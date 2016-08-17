@@ -92,14 +92,12 @@ void StartSketch(void)
 {
 	cli();
 	
-	/* Undo TIMER1 setup and clear the count before running the sketch */
+	/* Undo TIMER1 setup and clear the count before running the application */
 	TIMSK1 = 0;
+	TCCR1A = 0;
 	TCCR1B = 0;
-	// MAH 8/15/12 this clear is removed to save memory. Okay, it
-	//   introduces some inaccuracy in the timer in the sketch, but
-	//   not enough that it really matters.
-	//TCNT1H = 0;		// 16-bit write to TCNT1 requires high byte be written first
-	//TCNT1L = 0;
+	TCNT1H = 0;
+	TCNT1L = 0;
 	
 	/* Relocate the interrupt vector table to the application section */
 	MCUCR = (1 << IVCE);
@@ -124,7 +122,7 @@ int main(void)
 
 	/* Check the reason for the reset so we can act accordingly */
 	uint8_t  mcusr_state = MCUSR;		// store the initial state of the Status register
-	MCUSR = 0;							// clear all reset flags	
+	MCUSR = 0;				// clear all reset flags	
 
 	/* Watchdog may be configured with a 15 ms period so must disable it before going any further */
 	// MAH 8/15/12- I removed this because wdt_disable() is the first thing SetupHardware() does- why
@@ -146,7 +144,6 @@ int main(void)
 	MCUCR = (1 << IVSEL);
 	
 	LED_SETUP();
-	CPU_PRESCALE(0);
 	TX_LED_OFF();
 	RX_LED_OFF();
 	
@@ -155,13 +152,13 @@ int main(void)
 	// Our chosen compare match generates an interrupt every 1 ms.
 	// This interrupt is disabled selectively when doing memory reading, erasing,
 	// or writing since SPM has tight timing requirements. 
-
+	
 	OCR1AH = 0;
 	OCR1AL = 249;
 	TCCR1A = (1 << WGM12); // CTC mode (TOP in OCR1A)
 	TCCR1B = ((1 << CS11) | (1 << CS10));	// 1/64 prescaler on timer 1 input
 	TIMSK1 = (1 << OCIE1A);			// enable timer 1 output compare A match interrupt
-
+	
 	// MAH 8/15/12- this replaces bulky pgm_read_word(0) calls later on, to save memory.
 	if (pgm_read_word(0) != 0xFFFF)
 		sketchPresent = true;
@@ -201,7 +198,7 @@ int main(void)
 	
 	/* Initialize USB Subsystem */
 	USB_Init();
-
+	
 	/* Enable global interrupts so that the USB stack can function */
 	sei();
 	
