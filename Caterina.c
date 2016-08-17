@@ -157,11 +157,11 @@ int main(void)
 	// or writing since SPM has tight timing requirements. 
 
 	OCR1AH = 0;
-	OCR1AL = 250;
-	TIMSK1 = (1 << OCIE1A);			// enable timer 1 output compare A match interrupt
+	OCR1AL = 249;
+	TCCR1A = (1 << WGM12); // CTC mode (TOP in OCR1A)
 	TCCR1B = ((1 << CS11) | (1 << CS10));	// 1/64 prescaler on timer 1 input
-	
-	
+	TIMSK1 = (1 << OCIE1A);			// enable timer 1 output compare A match interrupt
+
 	// MAH 8/15/12- this replaces bulky pgm_read_word(0) calls later on, to save memory.
 	if (pgm_read_word(0) != 0xFFFF)
 		sketchPresent = true;
@@ -225,10 +225,6 @@ int main(void)
 
 ISR(TIMER1_COMPA_vect, ISR_BLOCK)
 {
-	/* Reset counter */
-	TCNT1H = 0;
-	TCNT1L = 0;
-
 	/* Check whether the TX or RX LED one-shot period has elapsed.  if so, turn off the LED */
 	if (TxLEDPulse && !(--TxLEDPulse))
 		TX_LED_OFF();
