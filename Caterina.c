@@ -93,12 +93,11 @@ void StartSketch(void)
 	cli();
 	
 	/* Undo TIMER1 setup and clear the count before running the application */
-	TIMSK1 = 0;
-	TCCR1A = 0;
-	TCCR1B = 0;
-	TCNT1H = 0;
-	TCNT1L = 0;
-	
+	TIMSK0 = 0;
+	TCCR0A = 0;
+	TCCR0B = 0;
+	TCNT0 = 0;
+
 	/* Relocate the interrupt vector table to the application section */
 	MCUCR = (1 << IVCE);
 	MCUCR = 0;
@@ -153,11 +152,10 @@ int main(void)
 	// This interrupt is disabled selectively when doing memory reading, erasing,
 	// or writing since SPM has tight timing requirements. 
 	
-	OCR1AH = 0;
-	OCR1AL = 249;
-	TCCR1A = (1 << WGM12); // CTC mode (TOP in OCR1A)
-	TCCR1B = ((1 << CS11) | (1 << CS10));	// 1/64 prescaler on timer 1 input
-	TIMSK1 = (1 << OCIE1A);			// enable timer 1 output compare A match interrupt
+	OCR0A = 249;
+	TCCR0A = (1 << WGM01); // CTC mode (TOP in OCR0A)
+	TCCR0B = ((1 << CS01) | (1 << CS00));	// 1/64 prescaler on timer 0 input
+	TIMSK0 = (1 << OCIE0A);			// enable timer 0 output compare A match interrupt
 	
 	// MAH 8/15/12- this replaces bulky pgm_read_word(0) calls later on, to save memory.
 	if (pgm_read_word(0) != 0xFFFF)
@@ -220,7 +218,7 @@ int main(void)
 	StartSketch();
 }
 
-ISR(TIMER1_COMPA_vect, ISR_BLOCK)
+ISR(TIMER0_COMPA_vect, ISR_BLOCK)
 {
 	/* Check whether the TX or RX LED one-shot period has elapsed.  if so, turn off the LED */
 	if (TxLEDPulse && !(--TxLEDPulse))
@@ -320,9 +318,9 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 		return;
 	}
 
-	/* Disable timer 1 interrupt - can't afford to process nonessential interrupts
+	/* Disable timer 0 interrupt - can't afford to process nonessential interrupts
 	 * while doing SPM tasks */
-	TIMSK1 = 0;
+	TIMSK0 = 0;
 
 	/* Check if command is to read memory */
 	if (Command == 'g')
@@ -411,8 +409,8 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 		WriteNextResponseByte('\r');
 	}
 
-	/* Re-enable timer 1 interrupt disabled earlier in this routine */	
-	TIMSK1 = (1 << OCIE1A);
+	/* Re-enable timer 0 interrupt disabled earlier in this routine */	
+	TIMSK0 = (1 << OCIE0A);
 }
 #endif
 
