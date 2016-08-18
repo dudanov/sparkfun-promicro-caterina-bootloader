@@ -96,15 +96,13 @@ void StartSketch(void)
 	TIMER_FREE;
 	
 	/* Relocate the interrupt vector table to the application section */
-	MCUCR = (1 << IVCE);
-	MCUCR = 0;
+	SET_IVT_APP;
 
 	TX_LED_OFF;
 	RX_LED_OFF;
 
 	/* jump to beginning of application space */
 	__asm__ volatile("jmp 0x0000");
-	
 }
 
 /** Main program entry point. This routine configures the hardware required by the bootloader, then continuously
@@ -136,9 +134,8 @@ int main(void)
 	clock_prescale_set(clock_div_1);
 	
 	// Relocate the interrupt vector table to the bootloader section
-	MCUCR = (1 << IVCE);
-	MCUCR = (1 << IVSEL);
-	
+	SET_IVT_BTLDR;
+
 	LED_SETUP;
 	TX_LED_OFF;
 	RX_LED_OFF;
