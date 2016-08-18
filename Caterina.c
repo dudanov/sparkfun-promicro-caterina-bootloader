@@ -142,9 +142,9 @@ int main(void)
 	MCUCR = (1 << IVCE);
 	MCUCR = (1 << IVSEL);
 	
-	LED_SETUP();
-	TX_LED_OFF();
-	RX_LED_OFF();
+	LED_SETUP;
+	TX_LED_OFF;
+	RX_LED_OFF;
 	
 	// Initialize TIMER0 to handle bootloader timeout and LED tasks.
 	// With 16 MHz clock and 1/64 prescaler, timer 1 is clocked at 250 kHz
@@ -152,10 +152,8 @@ int main(void)
 	// This interrupt is disabled selectively when doing memory reading, erasing,
 	// or writing since SPM has tight timing requirements.
 	
-	OCR0A = 249;
-	TCCR0A = (1 << WGM01);                // CTC mode (TOP in OCR0A)
-	TCCR0B = ((1 << CS01) | (1 << CS00)); // 1/64 prescaler on timer 0 input
-	TIMSK0 = (1 << OCIE0A);               // enable timer 0 output compare A match interrupt
+	TIMER_SETUP;
+	TIMER_OCI_ENABLE;
 	
 	// MAH 8/15/12- this replaces bulky pgm_read_word(0) calls later on, to save memory.
 	if (pgm_read_word(0) != 0xFFFF)
@@ -224,9 +222,9 @@ ISR(TIMER0_COMPA_vect, ISR_BLOCK)
 {
 	/* Check whether the TX or RX LED one-shot period has elapsed.  if so, turn off the LED */
 	if (TxLEDPulse && !(--TxLEDPulse))
-		TX_LED_OFF();
+		TX_LED_OFF;
 	if (RxLEDPulse && !(--RxLEDPulse))
-		RX_LED_OFF();
+		RX_LED_OFF;
 	
 	resetTimeout++;
 	if (pgm_read_word(0) != 0xFFFF)
@@ -322,7 +320,7 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 
 	/* Disable timer 0 interrupt - can't afford to process nonessential interrupts
 	 * while doing SPM tasks */
-	TIMSK0 = 0;
+	TIMER_OCI_DISABLE;
 
 	/* Check if command is to read memory */
 	if (Command == 'g')
@@ -412,7 +410,7 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 	}
 
 	/* Re-enable timer 0 interrupt disabled earlier in this routine */	
-	TIMSK0 = (1 << OCIE0A);
+	TIMER_OCI_ENABLE;
 }
 #endif
 
@@ -467,7 +465,7 @@ static void WriteNextResponseByte(const uint8_t Response)
 	/* Write the next byte to the IN endpoint */
 	Endpoint_Write_8(Response);
 	
-	TX_LED_ON();
+	TX_LED_ON;
 	TxLEDPulse = TX_RX_LED_PULSE_PERIOD;
 }
 
@@ -497,7 +495,7 @@ void CDC_Task(void)
 	if (!(Endpoint_IsOUTReceived()))
 	  return;
 	  
-	RX_LED_ON();
+	RX_LED_ON;
 	RxLEDPulse = TX_RX_LED_PULSE_PERIOD;
 
 	/* Read in the bootloader command (first byte sent from host) */
