@@ -76,6 +76,9 @@
 		#define TIMER_OCI_ENABLE  { TIMSK0 = (1 << OCIE0A); }
 		#define TIMER_OCI_DISABLE { TIMSK0 = 0; }
 		#define	TIMER_FREE        { TCCR0B = 0; TCCR0A = 0; }
+		
+		#define SET_IVT_APP       { MCUCR = (1 << IVCE); MCUCR = 0; }
+		#define SET_IVT_BTLDR     { MCUCR = (1 << IVCE); MCUCR = (1 << IVSEL); }
 
 	/* Type Defines: */
 		/** Type define for a non-returning pointer to the start of the loaded application in flash memory. */
