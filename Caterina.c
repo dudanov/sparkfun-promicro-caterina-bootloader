@@ -92,18 +92,15 @@ void StartSketch(void)
 {
 	cli();
 	
-	/* Undo TIMER1 setup and clear the count before running the application */
-	TIMSK0 = 0;
-	TCCR0A = 0;
-	TCCR0B = 0;
-	TCNT0 = 0;
-
+	/* Undo TIMER0 setup and clear the count before running the application */
+	TIMER_FREE;
+	
 	/* Relocate the interrupt vector table to the application section */
 	MCUCR = (1 << IVCE);
 	MCUCR = 0;
 
-	TX_LED_OFF();
-	RX_LED_OFF();
+	TX_LED_OFF;
+	RX_LED_OFF;
 
 	/* jump to beginning of application space */
 	__asm__ volatile("jmp 0x0000");
