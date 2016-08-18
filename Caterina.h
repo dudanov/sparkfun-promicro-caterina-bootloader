@@ -61,15 +61,21 @@
 		/** Hardware version minor of the CDC bootloader. */
 		#define BOOTLOADER_HWVERSION_MINOR   0x00
 
-		/** Eight character bootloader firmware identifier reported to the host when requested */
-		#define SOFTWARE_IDENTIFIER "CATERINA"
+		/** Seven character bootloader firmware identifier reported to the host when requested */
+		#define SOFTWARE_IDENTIFIER "CATERIN"
 		
-		#define CPU_PRESCALE(n) (CLKPR = 0x80, CLKPR = (n))
-		#define LED_SETUP()     DDRB |= (1 << 0); DDRD |= (1 << 5);
-		#define TX_LED_OFF()    PORTD |= (1 << 5)
-		#define TX_LED_ON()     PORTD &= ~(1 << 5)
-		#define RX_LED_OFF()    PORTB |= (1 << 0)
-		#define RX_LED_ON()     PORTB &= ~(1 << 0)
+		#define LED_SETUP         { DDRB |= (1 << 0); DDRD |= (1 << 5); }
+		#define TX_LED_OFF        { PORTD |= (1 << 5); }
+		#define TX_LED_ON         { PORTD &= ~(1 << 5); }
+		#define RX_LED_OFF        { PORTB |= (1 << 0); }
+		#define RX_LED_ON         { PORTB &= ~(1 << 0); }
+
+	/* Timer macros */
+
+		#define	TIMER_SETUP       { OCR0A = 249; TCCR0A = (1 << WGM01); TCCR0B = ((1 << CS01) | (1 << CS00)); }
+		#define TIMER_OCI_ENABLE  { TIMSK0 = (1 << OCIE0A); }
+		#define TIMER_OCI_DISABLE { TIMSK0 = 0; }
+		#define	TIMER_FREE        { TCCR0B = 0; TCCR0A = 0; }
 
 	/* Type Defines: */
 		/** Type define for a non-returning pointer to the start of the loaded application in flash memory. */
