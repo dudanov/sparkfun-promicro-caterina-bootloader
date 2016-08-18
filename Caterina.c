@@ -65,17 +65,13 @@ static bool sketchPresent = false;
 uint8_t TxLEDPulse = 0; // time remaining for Tx LED pulse
 uint8_t RxLEDPulse = 0; // time remaining for Rx LED pulse
 
-/* Bootloader timeout timer */
-// MAH 8/15/12- add this switch so timeouts work properly when the chip is running at 8MHz instead of 16.
-#if F_CPU == 8000000
-#define TIMEOUT_PERIOD	4000
-#define EXT_RESET_TIMEOUT_PERIOD	375
-#else
-#define TIMEOUT_PERIOD  8000
-#define EXT_RESET_TIMEOUT_PERIOD  750
-#endif
+/* Bootloader timeout timer in miliseconds */
+#define TIMEOUT_PERIOD 8000
+#define EXT_RESET_TIMEOUT_PERIOD 750
 
-// MAH 8/15/12- make this volatile, since we modify it in one place and read it in another, we want to make
+static const uint16_t timeout_period = (uint16_t)((double)TIMEOUT_PERIOD / ((double)16000000UL / (double)F_CPU));
+
+// MAH 8/15/12 - make this volatile, since we modify it in one place and read it in another, we want to make
 //  sure we're always working on the copy in memory and not an erroneous value stored in a cache somewhere.
 volatile uint16_t Timeout = 0;
 // MAH 8/15/12- added this for delay during startup. Did not use existing Timeout value b/c it only increments
@@ -201,7 +197,7 @@ int main(void)
 		CDC_Task();
 		USB_USBTask();
 		/* Time out and start the sketch if one is present */
-		if (Timeout > TIMEOUT_PERIOD)
+		if (Timeout > timeout_period)
 			RunBootloader = false;
 	}
 	
@@ -501,8 +497,8 @@ void CDC_Task(void)
 		* leaving just a few hundred milliseconds so the 
 		* bootloder has time to respond and service any 
 		* subsequent requests */
-		Timeout = TIMEOUT_PERIOD - 500;
-	
+		Timeout = timeout_period - 500;
+		
 		/* Re-enable RWW section - must be done here in case 
 		 * user has disabled verification on upload.  */
 		boot_rww_enable_safe();		
